@@ -1,0 +1,204 @@
+
+<style>
+#erd-wrap { padding: 0.5rem 0; }
+#erd-wrap svg { max-width: 100%; }
+</style>
+<div id="erd-wrap"><div id="erd"></div></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+
+const diagram = `erDiagram
+
+  country {
+    CHAR2       country_code  PK
+    VARCHAR100  country_name
+    VARCHAR50   region
+    TINYINT1    is_high_risk
+  }
+
+  industry {
+    INT         industry_id   PK
+    VARCHAR100  name
+    ENUM        criticality
+  }
+
+  analyst {
+    CHAR36      analyst_id    PK
+    VARCHAR100  name
+    VARCHAR150  email
+    ENUM        role
+    VARCHAR100  specialization
+    DATETIME    created_at
+  }
+
+  threat_actor {
+    CHAR36      actor_id      PK
+    VARCHAR100  alias
+    VARCHAR100  real_name
+    CHAR2       country_code  FK
+    ENUM        actor_type
+    VARCHAR100  motivation
+    ENUM        sophistication
+    DATE        active_since
+    DATE        last_seen
+    ENUM        status
+    TEXT        description
+    DATETIME    created_at
+  }
+
+  dark_source {
+    CHAR36      source_id     PK
+    VARCHAR150  name
+    ENUM        source_type
+    VARCHAR255  url_pattern
+    VARCHAR255  tor_address
+    VARCHAR50   language
+    TINYINT     reliability
+    TINYINT1    is_active
+    DATE        discovered_at
+    TEXT        description
+  }
+
+  breach_record {
+    CHAR36      breach_id        PK
+    VARCHAR200  organization
+    INT         industry_id      FK
+    CHAR2       country_code     FK
+    CHAR36      actor_id         FK
+    CHAR36      source_id        FK
+    DATE        breach_date
+    DATE        discovered_date
+    DATE        reported_date
+    ENUM        breach_type
+    BIGINT      records_exposed
+    VARCHAR255  data_types
+    DECIMAL     ransom_demanded
+    DECIMAL     ransom_paid
+    VARCHAR10   ransom_currency
+    ENUM        status
+    ENUM        severity
+    TINYINT1    public_disclosed
+    TEXT        description
+    DATETIME    created_at
+  }
+
+  leaked_credential {
+    CHAR36      cred_id          PK
+    CHAR36      breach_id        FK
+    VARCHAR100  email_domain
+    ENUM        credential_type
+    BIGINT      record_count
+    TINYINT1    is_verified
+    TINYINT1    is_for_sale
+    DECIMAL     asking_price
+    VARCHAR10   sale_currency
+    DATE        first_seen
+    DATE        last_seen
+    VARCHAR64   sample_hash
+  }
+
+  malware_sample {
+    CHAR36      malware_id    PK
+    VARCHAR150  name
+    VARCHAR100  family
+    ENUM        malware_type
+    DATE        first_seen
+    DATE        last_seen
+    CHAR32      hash_md5
+    CHAR64      hash_sha256
+    VARCHAR100  target_os
+    VARCHAR150  target_sector
+    TEXT        description
+    TINYINT1    is_active
+  }
+
+  actor_malware {
+    INT         id            PK
+    CHAR36      actor_id      FK
+    CHAR36      malware_id    FK
+    ENUM        relationship
+    DATE        first_used
+  }
+
+  ioc {
+    CHAR36      ioc_id        PK
+    CHAR36      breach_id     FK
+    CHAR36      actor_id      FK
+    ENUM        ioc_type
+    VARCHAR512  value
+    TINYINT     confidence
+    TINYINT1    is_active
+    DATE        first_seen
+    DATE        last_seen
+    VARCHAR200  tags
+    ENUM        tlp_level
+  }
+
+  risk_alert {
+    CHAR36      alert_id      PK
+    CHAR36      breach_id     FK
+    CHAR36      analyst_id    FK
+    VARCHAR100  alert_type
+    ENUM        severity
+    VARCHAR255  title
+    TEXT        description
+    TINYINT1    is_resolved
+    DATETIME    created_at
+    DATETIME    resolved_at
+  }
+
+  country      ||--o{ threat_actor      : "fk_actor_country"
+  country      ||--o{ breach_record     : "fk_breach_country"
+  industry     ||--o{ breach_record     : "fk_breach_industry"
+  threat_actor ||--o{ breach_record     : "fk_breach_actor"
+  dark_source  ||--o{ breach_record     : "fk_breach_source"
+  breach_record ||--o{ leaked_credential : "fk_cred_breach CASCADE"
+  breach_record ||--o{ ioc              : "fk_ioc_breach SET NULL"
+  breach_record ||--o{ risk_alert       : "fk_alert_breach CASCADE"
+  threat_actor ||--o{ actor_malware     : "fk_am_actor CASCADE"
+  malware_sample ||--o{ actor_malware   : "fk_am_malware CASCADE"
+  threat_actor ||--o{ ioc              : "fk_ioc_actor SET NULL"
+  analyst      ||--o{ risk_alert        : "fk_alert_analyst SET NULL"
+`;
+
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>

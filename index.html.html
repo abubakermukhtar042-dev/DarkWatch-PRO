@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DarkWatch Pro — Dark Web Threat Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#04080d;--bg2:#070d14;--bg3:#0a1219;--panel:#0c1a27;
+  --border:#0f2235;--border2:#1a3550;
+  --green:#00e676;--cyan:#00bcd4;--red:#ff1744;
+  --orange:#ff6d00;--yellow:#ffd600;--purple:#d500f9;
+  --pink:#f50057;--teal:#1de9b6;
+  --text:#b0c4d8;--text2:#5a7a94;--text3:#2a4a60;
+  --gg:0 0 18px rgba(0,230,118,.35);--gr:0 0 18px rgba(255,23,68,.35);
+  --gc:0 0 18px rgba(0,188,212,.35);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 70% 50% at 85% 5%,rgba(0,100,150,.06) 0%,transparent 60%),
+             radial-gradient(ellipse 50% 70% at 5% 90%,rgba(0,230,118,.03) 0%,transparent 50%);
+  pointer-events:none;z-index:0}
+
+#matrix-bg{position:fixed;top:0;left:0;width:100%;height:100%;opacity:.04;z-index:0;pointer-events:none}
+.layout{display:flex;min-height:100vh;position:relative;z-index:1}
+
+.sidebar{width:230px;flex-shrink:0;background:rgba(7,13,20,.95);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;backdrop-filter:blur(10px)}
+.logo-wrap{padding:22px 18px 18px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.logo-wrap::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.logo-eye{font-size:26px;margin-bottom:6px}
+.logo-name{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:var(--green);
+  letter-spacing:3px;text-shadow:var(--gg)}
+.logo-tagline{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);
+  letter-spacing:2px;margin-top:3px}
+.logo-version{position:absolute;top:22px;right:18px;font-family:'Share Tech Mono',monospace;
+  font-size:9px;color:var(--text3);border:1px solid var(--border2);padding:2px 6px;border-radius:2px}
+
+.nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-section{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;
+  color:var(--text3);padding:12px 18px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;
+  border-left:2px solid transparent;transition:all .2s;font-weight:600;font-size:13px;
+  letter-spacing:.5px;color:var(--text2)}
+.nav-item:hover{background:rgba(0,230,118,.04);color:var(--text);border-left-color:var(--border2)}
+.nav-item.active{background:rgba(0,230,118,.07);color:var(--green);border-left-color:var(--green)}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:9px;
+  padding:2px 6px;border-radius:8px;background:rgba(255,23,68,.2);color:var(--red);
+  border:1px solid rgba(255,23,68,.3)}
+.nav-badge.green{background:rgba(0,230,118,.15);color:var(--green);border-color:rgba(0,230,118,.3)}
+
+.sidebar-bottom{padding:14px 18px;border-top:1px solid var(--border)}
+.api-status{display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;
+  font-size:10px;color:var(--text3)}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:var(--gg);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{background:rgba(7,13,20,.9);border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+.page-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;
+  color:var(--cyan);letter-spacing:3px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.clock{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3)}
+.threat-pill{font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 12px;
+  border-radius:3px;background:rgba(255,23,68,.12);border:1px solid rgba(255,23,68,.35);
+  color:var(--red);letter-spacing:1px;animation:blink 4s infinite}
+@keyframes blink{0%,88%,100%{opacity:1}94%{opacity:.4}}
+
+.content{padding:20px 24px;flex:1}
+.section{display:none}
+.section.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:16px 18px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s}
+.stat-card:hover{transform:translateY(-2px)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px}
+.stat-card.c-red::before{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+.stat-card.c-grn::before{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.stat-card.c-cyn::before{background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.stat-card.c-org::before{background:linear-gradient(90deg,transparent,var(--orange),transparent)}
+.stat-card.c-ylw::before{background:linear-gradient(90deg,transparent,var(--yellow),transparent)}
+.stat-card.c-pur::before{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+.stat-card.c-pnk::before{background:linear-gradient(90deg,transparent,var(--pink),transparent)}
+.stat-card.c-tel::before{background:linear-gradient(90deg,transparent,var(--teal),transparent)}
+.stat-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.stat-val{font-family:'Orbitron',monospace;font-size:26px;font-weight:700;line-height:1}
+.c-red .stat-val{color:var(--red);text-shadow:var(--gr)}
+.c-grn .stat-val{color:var(--green);text-shadow:var(--gg)}
+.c-cyn .stat-val{color:var(--cyan);text-shadow:var(--gc)}
+.c-org .stat-val{color:var(--orange)}
+.c-ylw .stat-val{color:var(--yellow)}
+.c-pur .stat-val{color:var(--purple)}
+.c-pnk .stat-val{color:var(--pink)}
+.c-tel .stat-val{color:var(--teal)}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:5px}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.row3{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+.row-full{margin-bottom:14px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.ph{padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.pt{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;
+  color:var(--cyan);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.pt-dot{width:5px;height:5px;border-radius:50%;background:var(--green);
+  box-shadow:var(--gg);animation:pulse 2.5s infinite}
+
+.dwtable{width:100%;border-collapse:collapse}
+.dwtable th{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1.5px;
+  color:var(--text3);text-align:left;padding:9px 14px;
+  background:rgba(0,0,0,.25);border-bottom:1px solid var(--border);text-transform:uppercase}
+.dwtable td{padding:10px 14px;border-bottom:1px solid rgba(15,34,53,.6);
+  font-size:12px;transition:background .12s;vertical-align:middle}
+.dwtable tr:hover td{background:rgba(0,230,118,.025)}
+.dwtable tr:last-child td{border-bottom:none}
+
+.badge{font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 8px;
+  border-radius:2px;letter-spacing:.5px;display:inline-block;white-space:nowrap}
+.b-critical{background:rgba(255,23,68,.2);color:var(--red);border:1px solid rgba(255,23,68,.3)}
+.b-high{background:rgba(255,109,0,.2);color:var(--orange);border:1px solid rgba(255,109,0,.3)}
+.b-medium{background:rgba(255,214,0,.12);color:var(--yellow);border:1px solid rgba(255,214,0,.25)}
+.b-low{background:rgba(0,188,212,.12);color:var(--cyan);border:1px solid rgba(0,188,212,.25)}
+.b-active{background:rgba(255,23,68,.15);color:var(--red);border:1px solid rgba(255,23,68,.25)}
+.b-contained{background:rgba(255,214,0,.12);color:var(--yellow);border:1px solid rgba(255,214,0,.2)}
+.b-resolved{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.2)}
+.b-arrested{background:rgba(0,188,212,.12);color:var(--cyan);border:1px solid rgba(0,188,212,.2)}
+.b-inactive{background:rgba(90,122,148,.12);color:var(--text2);border:1px solid rgba(90,122,148,.2)}
+.b-green{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.2)}
+.b-purple{background:rgba(213,0,249,.12);color:var(--purple);border:1px solid rgba(213,0,249,.2)}
+
+.chart-box{padding:14px;height:220px}
+canvas{max-height:100%}
+
+.sev-row{display:flex;align-items:center;gap:10px;padding:8px 14px;
+  border-bottom:1px solid rgba(15,34,53,.5)}
+.sev-row:last-child{border-bottom:none}
+.sev-lbl{font-family:'Share Tech Mono',monospace;font-size:10px;width:70px;color:var(--text2)}
+.sev-track{flex:1;height:6px;background:rgba(0,0,0,.4);border-radius:3px;overflow:hidden}
+.sev-fill{height:100%;border-radius:3px;transition:width 1.2s ease}
+.sev-cnt{font-family:'Orbitron',monospace;font-size:11px;width:28px;text-align:right}
+
+.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.fbtn{font-family:'Share Tech Mono',monospace;font-size:10px;padding:5px 13px;border-radius:3px;
+  border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .2s}
+.fbtn:hover,.fbtn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,188,212,.06)}
+.fml{margin-left:auto}
+
+.btn{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.5px;
+  padding:6px 14px;border-radius:3px;border:none;cursor:pointer;transition:all .2s}
+.btn-grn{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.35);color:var(--green)}
+.btn-grn:hover{background:rgba(0,230,118,.2);box-shadow:var(--gg)}
+.btn-cyn{background:rgba(0,188,212,.08);border:1px solid rgba(0,188,212,.3);color:var(--cyan)}
+.btn-cyn:hover{background:rgba(0,188,212,.16)}
+.btn-red{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.3);color:var(--red)}
+.btn-sm{padding:4px 10px;font-size:9px}
+
+.actor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.actor-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.actor-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.actor-card.nation_state::before{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+.actor-card.ransomware_group::before{background:linear-gradient(90deg,transparent,var(--orange),transparent)}
+.actor-card.criminal_group::before{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+.actor-card.hacktivist::before{background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.actor-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.actor-alias{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.actor-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);margin-bottom:10px}
+.actor-stats{display:flex;gap:16px}
+.actor-stat-val{font-family:'Orbitron',monospace;font-size:18px;font-weight:700}
+.actor-stat-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px}
+.actor-badge-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+
+.source-card{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:14px 16px;display:flex;align-items:center;gap:14px;
+  border-bottom:1px solid var(--border);margin-bottom:8px}
+.source-card:last-child{margin-bottom:0}
+.source-icon{width:36px;height:36px;border-radius:4px;display:flex;align-items:center;
+  justify-content:center;font-size:16px;flex-shrink:0}
+.source-name{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--cyan);margin-bottom:2px}
+.source-desc{font-size:11px;color:var(--text3)}
+
+.mtype-Ransomware{color:var(--red)}
+.mtype-RAT{color:var(--orange)}
+.mtype-Backdoor{color:var(--purple)}
+.mtype-Worm{color:var(--yellow)}
+.mtype-Trojan{color:var(--pink)}
+.mtype-Toolkit{color:var(--cyan)}
+.mtype-Dropper{color:var(--teal)}
+
+.ioc-val{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text);
+  max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tlp-WHITE{color:#fff;font-size:9px}
+.tlp-GREEN{color:var(--green);font-size:9px}
+.tlp-AMBER{color:var(--yellow);font-size:9px}
+.tlp-RED{color:var(--red);font-size:9px}
+.conf-bar{height:4px;border-radius:2px;background:rgba(0,0,0,.4);width:60px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+.conf-fill{height:100%;border-radius:2px;background:var(--green);transition:width .8s ease}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);
+  z-index:500;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex;animation:fadeIn .2s ease}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;
+  width:720px;max-height:84vh;overflow-y:auto;box-shadow:0 0 80px rgba(0,0,0,.7)}
+.modal-hd{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1}
+.modal-title{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--cyan)}
+.modal-x{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1}
+.modal-x:hover{color:var(--red)}
+.modal-bd{padding:20px 22px}
+.dg2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.dg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.di label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);
+  letter-spacing:1px;display:block;margin-bottom:3px;text-transform:uppercase}
+.di span{font-size:13px;color:var(--text)}
+.di span.mono{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan)}
+.sec-title{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;
+  color:var(--text3);padding-bottom:8px;margin-bottom:10px;
+  border-bottom:1px solid var(--border);text-transform:uppercase}
+
+.toast{position:fixed;bottom:20px;right:20px;z-index:999;background:var(--bg2);
+  border:1px solid var(--green);border-radius:4px;padding:12px 18px;
+  font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--green);
+  box-shadow:var(--gg);transform:translateY(60px);opacity:0;transition:all .3s ease}
+.toast.show{transform:translateY(0);opacity:1}
+
+.ldg{display:flex;align-items:center;justify-content:center;padding:36px;gap:10px;
+  font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3)}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--green);
+  border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.form-group{margin-bottom:12px}
+.form-group label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);
+  letter-spacing:1px;display:block;margin-bottom:5px;text-transform:uppercase}
+.form-group input,.form-group select,.form-group textarea{
+  width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;
+  padding:8px 11px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;
+  outline:none;transition:border-color .2s;resize:vertical}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--cyan)}
+.form-group select option{background:var(--bg2)}
+
+@media(max-width:1100px){.stats-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:800px){.stats-grid{grid-template-columns:repeat(2,1fr)}.row2,.row3{grid-template-columns:1fr}.actor-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<canvas id="matrix-bg"></canvas>
+
+<div class="layout">
+<aside class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-eye">🕵️</div>
+    <div class="logo-name">DARKWATCH</div>
+    <div class="logo-tagline">// DARK WEB THREAT INTELLIGENCE</div>
+    <div class="logo-version">v2.0</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">// MONITOR</div>
+    <div class="nav-item active" data-s="dashboard" onclick="go(this)">
+      <span class="nav-icon">⬡</span><span>Dashboard</span>
+    </div>
+    <div class="nav-item" data-s="alerts" onclick="go(this)">
+      <span class="nav-icon">⚡</span><span>Active Alerts</span>
+      <span class="nav-badge" id="badge-alerts">0</span>
+    </div>
+    <div class="nav-section">// INTELLIGENCE</div>
+    <div class="nav-item" data-s="breaches" onclick="go(this)">
+      <span class="nav-icon">💀</span><span>Breach Records</span>
+      <span class="nav-badge green" id="badge-breaches">0</span>
+    </div>
+    <div class="nav-item" data-s="actors" onclick="go(this)">
+      <span class="nav-icon">👤</span><span>Threat Actors</span>
+    </div>
+    <div class="nav-item" data-s="credentials" onclick="go(this)">
+      <span class="nav-icon">🔑</span><span>Leaked Creds</span>
+    </div>
+    <div class="nav-item" data-s="malware" onclick="go(this)">
+      <span class="nav-icon">🦠</span><span>Malware Library</span>
+    </div>
+    <div class="nav-item" data-s="iocs" onclick="go(this)">
+      <span class="nav-icon">🎯</span><span>IOC Database</span>
+    </div>
+    <div class="nav-section">// INFRASTRUCTURE</div>
+    <div class="nav-item" data-s="sources" onclick="go(this)">
+      <span class="nav-icon">🌐</span><span>Dark Sources</span>
+    </div>
+    <div class="nav-item" data-s="industries" onclick="go(this)">
+      <span class="nav-icon">🏭</span><span>Industry Risk</span>
+    </div>
+    <div class="nav-section">// PERSONNEL</div>
+    <div class="nav-item" data-s="analysts" onclick="go(this)">
+      <span class="nav-icon">👥</span><span>Internal Analysts</span>
+    </div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="api-status"><div class="pulse-dot"></div>API ONLINE · PORT 5000</div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="page-title" id="pg-title">THREAT OVERVIEW</div>
+    <div style="flex:1; max-width:360px; margin-left:24px;">
+       <input type="text" id="global-search" placeholder="🕵️ Search organization, CVE, actor, value..." 
+              style="width:100%; background:var(--bg3); border:1px solid var(--border2); border-radius:3px; padding:6px 12px; color:var(--text); font-family:'Share Tech Mono', monospace; font-size:12px; outline:none;"
+              onkeyup="debounceSearch(this.value)">
+    </div>
+    <div class="topbar-right">
+      <div class="clock" id="clock"></div>
+      <div class="threat-pill">⚠ DARK WEB ACTIVE</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="section active" id="s-dashboard">
+      <div class="stats-grid" id="dash-stats">
+        <div class="ldg"><div class="spin"></div>Loading intel...</div>
+      </div>
+      <div class="row3">
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>BREACH DISCOVERY TREND (30 DAYS)</div></div>
+          <div class="chart-box"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>SEVERITY BREAKDOWN</div></div>
+          <div id="sev-bars" style="padding:8px 0"></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>BREACH TYPE DISTRIBUTION</div></div>
+          <div class="chart-box"><canvas id="typeChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>TOP TARGETED INDUSTRIES</div></div>
+          <div class="chart-box"><canvas id="indChart"></canvas></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>TOP THREAT ACTORS</div></div>
+          <div id="dash-actors"></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>RECENT BREACHES</div></div>
+          <div id="dash-recent"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="s-alerts">
+      <div class="panel row-full">
+        <div class="ph">
+          <div class="pt"><div class="pt-dot"></div>OPEN RISK ALERTS</div>
+          <button class="btn btn-grn btn-sm" onclick="loadAlerts()">↺ REFRESH</button>
+        </div>
+        <table class="dwtable">
+          <thead><tr><th>SEVERITY</th><th>TYPE</th><th>ORGANIZATION</th><th>TITLE</th><th>ANALYST</th><th>DATE</th><th>ACTION</th></tr></thead>
+          <tbody id="alerts-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="s-breaches">
+      <div class="filters">
+        <button class="fbtn active" onclick="filterBreaches('','',this)">ALL</button>
+        <button class="fbtn" onclick="filterBreaches('Critical','',this)">CRITICAL</button>
+        <button class="fbtn" onclick="filterBreaches('High','',this)">HIGH</button>
+        <button class="fbtn" onclick="filterBreaches('Medium','',this)">MEDIUM</button>
+        <button class="fbtn" onclick="filterBreaches('','Ransomware',this)">RANSOMWARE</button>
+        <button class="fbtn" onclick="filterBreaches('','Data Exfiltration',this)">EXFILTRATION</button>
+        <button class="fbtn" onclick="filterBreaches('','Phishing',this)">PHISHING</button>
+        <button class="btn btn-cyn fml" onclick="showAddBreach()">+ LOG BREACH</button>
+      </div>
+      <div class="panel">
+        <div class="ph">
+          <div class="pt"><div class="pt-dot"></div>BREACH INTELLIGENCE DATABASE</div>
+          <span id="breach-count" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3)"></span>
+        </div>
+        <table class="dwtable">
+          <thead><tr><th>ORGANIZATION</th><th>INDUSTRY</th><th>COUNTRY</th><th>TYPE</th><th>RECORDS</th><th>SEVERITY</th><th>STATUS</th><th>ACTOR</th><th>ACTION</th></tr></thead>
+          <tbody id="breaches-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="s-actors">
+      <div class="filters">
+        <button class="fbtn active" onclick="filterActors('',this)">ALL</button>
+        <button class="fbtn" onclick="filterActors('nation_state',this)">NATION STATE</button>
+        <button class="fbtn" onclick="filterActors('ransomware_group',this)">RANSOMWARE</button>
+        <button class="fbtn" onclick="filterActors('criminal_group',this)">CRIMINAL</button>
+        <button class="fbtn" onclick="filterActors('active',this)">ACTIVE</button>
+        <button class="btn btn-cyn fml" onclick="showFormModal('actor')">+ REGISTER ACTOR</button>
+      </div>
+      <div class="actor-grid" id="actors-grid"></div>
+    </div>
+
+    <div class="section" id="s-credentials">
+      <div class="filters">
+        <button class="btn btn-cyn fml" onclick="showFormModal('credential')">+ ADD CREDS DUMP</button>
+      </div>
+      <div class="panel row-full">
+        <div class="ph"><div class="pt"><div class="pt-dot"></div>LEAKED CREDENTIAL MONITOR</div></div>
+        <table class="dwtable">
+          <thead><tr><th>ORGANIZATION</th><th>EMAIL DOMAIN</th><th>TYPE</th><th>COUNT</th><th>FOR SALE</th><th>PRICE</th><th>VERIFIED</th><th>ACTION</th></tr></thead>
+          <tbody id="creds-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="s-malware">
+      <div class="filters">
+        <button class="btn btn-cyn fml" onclick="showFormModal('malware')">+ ADD MALWARE STRAIN</button>
+      </div>
+      <div class="panel row-full">
+        <div class="ph"><div class="pt"><div class="pt-dot"></div>MALWARE SAMPLE LIBRARY</div></div>
+        <table class="dwtable">
+          <thead><tr><th>NAME</th><th>FAMILY</th><th>TYPE</th><th>TARGET OS</th><th>TARGET SECTOR</th><th>THREAT ACTOR</th><th>STATUS</th><th>ACTION</th></tr></thead>
+          <tbody id="malware-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="s-iocs">
+      <div class="filters">
+        <button class="fbtn active" onclick="filterIOC('',this)">ALL TYPES</button>
+        <button class="fbtn" onclick="filterIOC('ip',this)">IP</button>
+        <button class="fbtn" onclick="filterIOC('domain',this)">DOMAIN</button>
+        <button class="fbtn" onclick="filterIOC('hash_sha256',this)">SHA256</button>
+        <button class="btn btn-cyn fml" onclick="showFormModal('ioc')">+ INJECT IOC</button>
+      </div>
+      <div class="panel">
+        <div class="ph">
+          <div class="pt"><div class="pt-dot"></div>INDICATORS OF COMPROMISE (IOC)</div>
+          <span id="ioc-count" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3)"></span>
+        </div>
+        <table class="dwtable">
+          <thead><tr><th>TYPE</th><th>VALUE</th><th>ACTOR</th><th>ORGANIZATION</th><th>CONFIDENCE</th><th>TLP</th><th>ACTION</th></tr></thead>
+          <tbody id="ioc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="s-sources">
+      <div class="filters">
+        <button class="btn btn-cyn fml" onclick="showFormModal('source')">+ INTERCEPT NEW SOURCE</button>
+      </div>
+      <div class="row2">
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>MONITORED DARK WEB SOURCES</div></div>
+          <div id="sources-list" style="padding:10px;"></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt"><div class="pt-dot"></div>SOURCE BREACH CONTRIBUTION</div></div>
+          <div class="chart-box"><canvas id="srcChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="s-industries">
+      <div class="panel row-full">
+        <div class="ph"><div class="pt"><div class="pt-dot"></div>INDUSTRY RISK ANALYSIS</div></div>
+        <table class="dwtable">
+          <thead><tr><th>INDUSTRY</th><th>CRITICALITY</th><th>BREACH COUNT</th><th>TOTAL RECORDS EXPOSED</th><th>RISK EXPOSURE</th></tr></thead>
+          <tbody id="ind-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="s-analysts">
+      <div class="filters">
+        <button class="btn btn-cyn fml" onclick="showFormModal('analyst')">+ ONBOARD ANALYST</button>
+      </div>
+      <div class="panel row-full">
+        <div class="ph"><div class="pt"><div class="pt-dot"></div>ACTIVE MONITORING SECURITY TEAM</div></div>
+        <table class="dwtable">
+          <thead><tr><th>NAME</th><th>EMAIL</th><th>ROLE</th><th>SPECIALIZATION</th><th>ONBOARDED</th><th>ACTION</th></tr></thead>
+          <tbody id="analysts-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<div class="overlay" id="breach-modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="bm-title">BREACH DETAIL</div>
+      <button class="modal-x" onclick="closeModal('breach-modal')">✕</button>
+    </div>
+    <div class="modal-bd" id="bm-body"></div>
+  </div>
+</div>
+
+<div class="overlay" id="actor-modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="am-title">THREAT ACTOR PROFILE</div>
+      <button class="modal-x" onclick="closeModal('actor-modal')">✕</button>
+    </div>
+    <div class="modal-bd" id="am-body"></div>
+  </div>
+</div>
+
+<div class="overlay" id="form-modal">
+  <div class="modal" style="width:540px">
+    <div class="modal-hd"><div class="modal-title" id="form-modal-title">LOG RECOVERY ARCHIVE</div><button class="modal-x" onclick="closeModal('form-modal')">✕</button></div>
+    <div class="modal-bd" id="form-modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API='http://localhost:5000/api';
+let allBreaches=[],allActors=[],allIOCs=[],allCreds=[],currentSearchQuery="";
+
+// Matrix rain background
+(function(){
+  const c=document.getElementById('matrix-bg');const ctx=c.getContext('2d');
+  c.width=window.innerWidth;c.height=window.innerHeight;
+  const cols=Math.floor(c.width/16);const drops=Array(cols).fill(1);
+  const chars='0123456789ABCDEF🥷☠️☣️🔒';
+  function draw(){
+    ctx.fillStyle='rgba(4,8,13,0.05)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#00e676';ctx.font='12px Share Tech Mono';
+    for(let i=0;i<drops.length;i++){
+      ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*16,drops[i]*16);
+      if(drops[i]*16>c.height&&Math.random()>0.975)drops[i]=0;drops[i]++;
+    }
+  }
+  setInterval(draw,80);
+})();
+
+function tick(){const n=new Date();document.getElementById('clock').textContent=n.toLocaleDateString('en-GB')+' '+n.toLocaleTimeString('en-GB')}
+tick();setInterval(tick,1000);
+
+function toast(m,c='var(--green)'){
+  const t=document.getElementById('toast');t.textContent=m;t.style.borderColor=c;t.style.color=c;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+const titles={dashboard:'THREAT OVERVIEW',alerts:'ACTIVE RISK ALERTS',breaches:'BREACH INTELLIGENCE',
+  actors:'THREAT ACTOR PROFILES',credentials:'LEAKED CREDENTIALS',malware:'MALWARE LIBRARY',
+  iocs:'INDICATORS OF COMPROMISE',sources:'DARK WEB SOURCES',industries:'INDUSTRY RISK ANALYSIS',analysts:'INTERNAL SECURITY ANALYSTS'};
+
+function go(el){
+  document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');const s=el.dataset.s;
+  document.getElementById('s-'+s).classList.add('active');
+  document.getElementById('pg-title').textContent=titles[s];
+  document.getElementById('global-search').value = ""; currentSearchQuery = "";
+  if(s=='dashboard')  loadDashboard();
+  if(s=='alerts')     loadAlerts();
+  if(s=='breaches')   loadBreaches();
+  if(s=='actors')     loadActors();
+  if(s=='credentials')loadCreds();
+  if(s=='malware')    loadMalware();
+  if(s=='iocs')       loadIOCs();
+  if(s=='sources')    loadSources();
+  if(s=='industries') loadIndustries();
+  if(s=='analysts')   loadAnalysts();
+}
+
+let searchTimer;
+function debounceSearch(val){
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>{
+    currentSearchQuery=val.trim();
+    const activeView=document.querySelector('.nav-item.active').dataset.s;
+    if(activeView==='breaches') loadBreaches();
+    if(activeView==='actors') loadActors();
+    if(activeView==='credentials') loadCreds();
+    if(activeView==='malware') loadMalware();
+    if(activeView==='iocs') loadIOCs();
+  },300);
+}
+
+function fmt(n){if(!n)return'0';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toString()}
+function sevBadge(s){const m={Critical:'critical',High:'high',Medium:'medium',Low:'low'};return`<span class="badge b-${m[s]||'medium'}">${s||'—'}</span>`}
+function statusBadge(s){const m={active:'active',contained:'contained',resolved:'resolved',inactive:'inactive',arrested:'arrested'};return`<span class="badge b-${m[s]||'inactive'}">${s||'—'}</span>`}
+function typeColor(t){const m={'Ransomware':'var(--red)','Data Exfiltration':'var(--orange)','Phishing':'var(--yellow)'};return m[t]||'var(--text2)'}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+
+// DASHBOARD MODULE
+let charts={};
+async function loadDashboard(){
+  const r=await fetch(API+'/dashboard');const d=await r.json();const s=d.stats;
+  document.getElementById('badge-alerts').textContent=s.open_alerts;
+  document.getElementById('badge-breaches').textContent=s.total_breaches;
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card c-red"><div class="stat-lbl">CRITICAL ALERTS</div><div class="stat-val">${s.critical_alerts}</div><div class="stat-sub">Unresolved threats</div></div>
+    <div class="stat-card c-org"><div class="stat-lbl">ACTIVE BREACHES</div><div class="stat-val">${s.active_breaches}</div><div class="stat-sub">Live incidents</div></div>
+    <div class="stat-card c-ylw"><div class="stat-lbl">TOTAL BREACHES</div><div class="stat-val">${s.total_breaches}</div><div class="stat-sub">In system</div></div>
+    <div class="stat-card c-red"><div class="stat-lbl">RECORDS EXPOSED</div><div class="stat-val">${fmt(s.total_records)}</div><div class="stat-sub">Data sets leaked</div></div>
+  `;
+  
+  const ctx1=document.getElementById('trendChart').getContext('2d');
+  if(charts.trend)charts.trend.destroy();
+  charts.trend=new Chart(ctx1,{type:'line',data:{labels:d.breach_trend.map(x=>x.date.slice(5)),datasets:[{label:'Breaches',data:d.breach_trend.map(x=>x.count),borderColor:'#00e676',backgroundColor:'rgba(0,230,118,0.05)',fill:true}]}});
+  
+  const ctx2=document.getElementById('typeChart').getContext('2d');
+  if(charts.type)charts.type.destroy();
+  charts.type=new Chart(ctx2,{type:'doughnut',data:{labels:d.breach_type_dist.map(x=>x.breach_type),datasets:[{data:d.breach_type_dist.map(x=>x.cnt),backgroundColor:['#ff1744','#ff6d00','#ffd600','#d500f9']}]}});
+
+  const ctx3=document.getElementById('indChart').getContext('2d');
+  if(charts.ind)charts.ind.destroy();
+  charts.ind=new Chart(ctx3,{
+    type:'bar',
+    data:{
+      labels:d.industry_dist.map(x=>x.industry),
+      datasets:[{data:d.industry_dist.map(x=>x.cnt),backgroundColor:'rgba(0,188,212,0.4)'}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false}
+  });
+
+  const sc={Critical:'var(--red)',High:'var(--orange)',Medium:'var(--yellow)',Low:'var(--cyan)'};
+  const maxS=Math.max(...d.severity_dist.map(x=>x.cnt),1);
+  document.getElementById('sev-bars').innerHTML=d.severity_dist.map(x=>`
+    <div class="sev-row">
+      <div class="sev-lbl">${x.severity}</div>
+      <div class="sev-track"><div class="sev-fill" style="width:${(x.cnt/maxS*100).toFixed(1)}%;background:${sc[x.severity]}"></div></div>
+      <div class="sev-cnt" style="color:${sc[x.severity]}">${x.cnt}</div>
+    </div>`).join('');
+
+  document.getElementById('dash-actors').innerHTML=d.top_actors.map(a=>`<div style="padding:8px; border-bottom:1px solid var(--border); font-size:12px;">${a.alias} - Breaches: ${a.breach_count}</div>`).join('');
+  document.getElementById('dash-recent').innerHTML=d.recent_breaches.map(b=>`<div style="padding:8px; border-bottom:1px solid var(--border); font-size:12px;">${b.organization} [${b.severity}]</div>`).join('');
+}
+
+// ALERTS MODULE
+async function loadAlerts(){
+  const tbody=document.getElementById('alerts-tbody');const r=await fetch(API+'/alerts');const data=await r.json();
+  tbody.innerHTML=data.length===0?'<tr><td colspan="7">✓ SYSTEM SECURE</td></tr>':
+  data.map(a=>`<tr><td>${sevBadge(a.severity)}</td><td>${a.alert_type}</td><td>${a.organization}</td><td>${a.title}</td><td>${a.analyst_name||'—'}</td><td>${a.created_at}</td><td><button class="btn btn-grn btn-sm" onclick="resolveAlert('${a.alert_id}')">RESOLVE</button></td></tr>`).join('');
+}
+async function resolveAlert(id){
+  await fetch(`${API}/alerts/${id}/resolve`,{method:'POST'});toast('✓ Alert resolved');loadAlerts();
+}
+
+// GENERIC PURGE COMMAND ENGINE
+async function executeDelete(endpoint, id, callback) {
+  if(confirm("⚠ Execution Warning: Are you sure you want to permanently delete this dataset entry?")) {
+    const r = await fetch(`${API}/${endpoint}/${id}`, { method: 'DELETE' });
+    if(r.ok) { toast('🗑 Entry purged from schema configuration.', 'var(--red)'); callback(); }
+  }
+}
+
+// BREACH INTEGRATION PLATFORM
+async function loadBreaches(sev='',type=''){
+  const tbody=document.getElementById('breaches-tbody');
+  let url=`${API}/breaches?severity=${sev}&type=${encodeURIComponent(type)}&q=${encodeURIComponent(currentSearchQuery)}`;
+  const r=await fetch(url);allBreaches=await r.json();
+  document.getElementById('breach-count').textContent=allBreaches.length+' ENTRIES';
+  tbody.innerHTML=allBreaches.map(b=>`<tr>
+    <td style="font-weight:600; cursor:pointer;" onclick="viewBreachDetails('${b.breach_id}')">${b.organization}</td>
+    <td>${b.industry||'—'}</td><td>${b.country||'—'}</td><td>${b.breach_type}</td>
+    <td style="font-family:'Orbitron';color:var(--orange)">${fmt(b.records_exposed)}</td><td>${sevBadge(b.severity)}</td><td>${statusBadge(b.status)}</td>
+    <td>${b.actor_name||'Unknown'}</td>
+    <td>
+       <button class="btn btn-cyn btn-sm" onclick="showEditBreachModal('${b.breach_id}')">EDIT</button>
+       <button class="btn btn-red btn-sm" onclick="executeDelete('breaches','${b.breach_id}',loadBreaches)">DEL</button>
+    </td></tr>`).join('');
+}
+function filterBreaches(sev,type,btn){
+  document.querySelectorAll('#s-breaches .fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadBreaches(sev,type);
+}
+function showAddBreach(){ showFormModal('breach'); }
+
+// ACTOR DASHBOARD CONTROLLER
+async function loadActors(filter=''){
+  const grid=document.getElementById('actors-grid');
+  const r=await fetch(`${API}/actors?q=${encodeURIComponent(currentSearchQuery)}`);allActors=await r.json();
+  let filtered=allActors;if(filter) filtered=allActors.filter(a=>a.actor_type===filter||a.status===filter);
+  grid.innerHTML=filtered.map(a=>`
+    <div class="actor-card ${a.actor_type}">
+      <div class="actor-alias" onclick="viewActorProfile('${a.actor_id}')">${a.alias} [${a.status}]</div>
+      <div class="actor-meta">${a.country_name||'Unknown'} · ${a.actor_type.toUpperCase()}</div>
+      <div class="actor-stats"><div>Stolen: ${fmt(a.total_stolen)}</div><div>Malware Count: ${a.malware_count}</div></div>
+      <div style="margin-top:10px;">
+         <button class="btn btn-cyn btn-sm" onclick="showEditActorModal('${a.actor_id}')">EDIT</button>
+         <button class="btn btn-red btn-sm" onclick="executeDelete('actors','${a.actor_id}',loadActors)">DELETE</button>
+      </div>
+    </div>`).join('');
+}
+function filterActors(f,btn){
+  document.querySelectorAll('#s-actors .fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadActors(f);
+}
+
+// LEAKED CREDENTIALS CONTROLLER
+async function loadCreds(){
+  const tbody=document.getElementById('creds-tbody');const r=await fetch(`${API}/credentials?q=${encodeURIComponent(currentSearchQuery)}`);allCreds=await r.json();
+  renderCredentialsTable(allCreds);
+}
+function renderCredentialsTable(data){
+  document.getElementById('creds-tbody').innerHTML=data.map(c=>`<tr>
+    <td>${c.organization}</td><td style="font-family:'Share Tech Mono';color:var(--cyan)">${c.email_domain}</td><td>${c.credential_type}</td>
+    <td>${fmt(c.record_count)}</td><td>${c.is_for_sale?'YES':'NO'}</td><td>$${c.asking_price||0}</td><td>${c.is_verified?'VERIFIED':'—'}</td>
+    <td>
+       <button class="btn btn-cyn btn-sm" onclick="showEditCredentialModal('${c.cred_id}')">EDIT</button>
+       <button class="btn btn-red btn-sm" onclick="executeDelete('credentials','${c.cred_id}',loadCreds)">DELETE</button>
+    </td></tr>`).join('');
+}
+
+// MALWARE STRAINS CONTROLLER
+async function loadMalware(){
+  const tbody=document.getElementById('malware-tbody');const r=await fetch(`${API}/malware?q=${encodeURIComponent(currentSearchQuery)}`);const data=await r.json();
+  renderMalwareTable(data);
+}
+function renderMalwareTable(data){
+  document.getElementById('malware-tbody').innerHTML=data.map(m=>`<tr>
+    <td style="font-weight:700;">${m.name}</td><td>${m.family||'—'}</td><td class="mtype-${m.malware_type}">${m.malware_type}</td>
+    <td>${m.target_os}</td><td>${m.target_sector||'—'}</td><td>${m.actor_names||'Unknown'}</td><td>${m.is_active?'ACTIVE':'INACTIVE'}</td>
+    <td>
+       <button class="btn btn-cyn btn-sm" onclick="showEditMalwareModal('${m.malware_id}')">EDIT</button>
+       <button class="btn btn-red btn-sm" onclick="executeDelete('malware','${m.malware_id}',loadMalware)">DELETE</button>
+    </td></tr>`).join('');
+}
+
+// IOC LOADER
+async function loadIOCs(){
+  const r=await fetch(`${API}/iocs?q=${encodeURIComponent(currentSearchQuery)}`);allIOCs=await r.json();
+  document.getElementById('ioc-count').textContent=allIOCs.length+' DETECTED';renderIOCs(allIOCs);
+}
+function renderIOCs(data){
+  document.getElementById('ioc-tbody').innerHTML=data.map(i=>`<tr>
+    <td><span class="badge b-green">${i.ioc_type}</span></td><td class="ioc-val">${i.value}</td><td>${i.actor_name||'—'}</td>
+    <td>${i.organization||'—'}</td><td>${i.confidence}%</td><td class="tlp-${i.tlp_level}">■ ${i.tlp_level}</td>
+    <td>
+       <button class="btn btn-cyn btn-sm" onclick="showEditIocModal('${i.ioc_id}')">EDIT</button>
+       <button class="btn btn-red btn-sm" onclick="executeDelete('iocs','${i.ioc_id}',loadIOCs)">DELETE</button>
+    </td></tr>`).join('');
+}
+function filterIOC(t,btn){
+  document.querySelectorAll('#s-iocs .fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  renderIOCs(t ? allIOCs.filter(i=>i.ioc_type===t) : allIOCs);
+}
+
+// SOURCES MONITOR
+async function loadSources(){
+  const r=await fetch(API+'/sources');const data=await r.json();
+  document.getElementById('sources-list').innerHTML=data.map(s=>`
+    <div class="source-card">
+      <div style="flex:1;">
+         <div class="source-name">${s.name} [${s.source_type}]</div>
+         <div class="source-desc">${s.description||''}</div>
+      </div>
+      <div>
+         <button class="btn btn-cyn btn-sm" onclick="showEditSourceModal('${s.source_id}')">EDIT</button>
+         <button class="btn btn-red btn-sm" onclick="executeDelete('sources','${s.source_id}',loadSources)">DELETE</button>
+      </div>
+    </div>`).join('');
+}
+
+// INDUSTRIES TRACKER
+async function loadIndustries(){
+  const tbody=document.getElementById('ind-tbody');const r=await fetch(API+'/industries');const data=await r.json();
+  tbody.innerHTML=data.map(i=>`<tr><td>${i.name}</td><td>${i.criticality}</td><td>${i.breach_count}</td><td>${fmt(i.total_records)}</td><td>[RUNNING RISK]</td></tr>`).join('');
+}
+
+// ANALYST MANAGEMENT ENGINE
+async function loadAnalysts(){
+  const tbody=document.getElementById('analysts-tbody');const r=await fetch(API+'/analysts');const data=await r.json();
+  tbody.innerHTML=data.map(a=>`<tr>
+    <td style="font-weight:600;">${a.name}</td><td>${a.email}</td><td>${a.role.toUpperCase()}</td><td>${a.specialization||'—'}</td><td>${a.created_at}</td>
+    <td>
+       <button class="btn btn-cyn btn-sm" onclick="showEditAnalystModal('${a.analyst_id}')">EDIT</button>
+       <button class="btn btn-red btn-sm" onclick="executeDelete('analysts','${a.analyst_id}',loadAnalysts)">OFFBOARD</button>
+    </td></tr>`).join('');
+}
+
+// DETAIL VIEWER TARGET WINDOW LOGIC
+async function viewBreachDetails(id){
+  document.getElementById('breach-modal').classList.add('show');
+  const r=await fetch(API+'/breaches/'+id);const d=await r.json();const b=d.breach;
+  document.getElementById('bm-title').textContent=b.organization;
+  document.getElementById('bm-body').innerHTML=`<p>${b.description||'No summary information registered.'}</p><br><p>Severity Target: ${b.severity} | Type Classification: ${b.breach_type}</p>`;
+}
+async function viewActorProfile(id){
+  document.getElementById('actor-modal').classList.add('show');
+  const r=await fetch(API+'/actors/'+id);const d=await r.json();const a=d.actor;
+  document.getElementById('am-title').textContent=a.alias;
+  document.getElementById('am-body').innerHTML=`<p>Operating Country Risk Code: ${a.country_code||'Unknown'} | Classification Profile: ${a.actor_type}</p><br><p>${a.description||'Profile definition matrix empty.'}</p>`;
+}
+
+function showFormModal(targetType){
+  document.getElementById('form-modal').classList.add('show');
+  const container=document.getElementById('form-modal-body');
+  document.getElementById('form-modal-title').textContent=`LOG SYSTEM NEW ${targetType.toUpperCase()}`;
+  
+  if(targetType==='breach'){
+    container.innerHTML=`
+      <div class="form-group"><label>Organization Target *</label><input id="ins-org"></div>
+      <div class="form-group"><label>Breach Sector Type</label><select id="ins-type"><option>Ransomware</option><option>Data Exfiltration</option><option>Phishing</option></select></div>
+      <div class="form-group"><label>Severity Risk Rating</label><select id="ins-sev"><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+      <div class="form-group"><label>Records Exposed Amount</label><input id="ins-rec" type="number" value="0"></div>
+      <div class="form-group"><label>Operational Synopsis</label><textarea id="ins-desc" rows="2"></textarea></div>
+      <button class="btn btn-grn" style="width:100%;" onclick="submitCreation('breaches', {organization:document.getElementById('ins-org').value, breach_type:document.getElementById('ins-type').value, severity:document.getElementById('ins-sev').value, records_exposed:document.getElementById('ins-rec').value, description:document.getElementById('ins-desc').value}, loadBreaches)">COMMIT ENTRY</button>`;
+  }
+  if(targetType==='actor'){
+    container.innerHTML=`
+      <div class="form-group"><label>Threat Actor Alias *</label><input id="ins-alias"></div>
+      <div class="form-group"><label>Grouping Framework Classification</label><select id="ins-atype"><option>nation_state</option><option>ransomware_group</option><option>criminal_group</option></select></div>
+      <div class="form-group"><label>Sophistication Index Meter</label><select id="ins-soph"><option>Critical</option><option>High</option><option>Medium</option></select></div>
+      <div class="form-group"><label>Profile System Metadata Background</label><textarea id="ins-adesc" rows="2"></textarea></div>
+      <button class="btn btn-grn" style="width:100%;" onclick="submitCreation('actors', {alias:document.getElementById('ins-alias').value, actor_type:document.getElementById('ins-atype').value, sophistication:document.getElementById('ins-soph').value, description:document.getElementById('ins-adesc').value}, loadActors)">REGISTER BASE ENTITY</button>`;
+  }
+  if(targetType==='credential'){
+    container.innerHTML=`
+      <div class="form-group"><label>Linked Incident Identity (Breach ID) *</label><input id="ins-cbid" placeholder="Paste System UUID Reference"></div>
+      <div class="form-group"><label>Intercepted Vector Domain Name</label><input id="ins-cdom" placeholder="corporate-network.com"></div>
+      <div class="form-group"><label>Credential Dump Type Structure</label><select id="ins-ctyp"><option>email_password</option><option>session_token</option><option>api_key</option></select></div>
+      <div class="form-group"><label>Identified Dataset Intercept Count</label><input id="ins-ccnt" type="number" value="0"></div>
+      <button class="btn btn-grn" style="width:100%;" onclick="submitCreation('credentials', {breach_id:document.getElementById('ins-cbid').value, email_domain:document.getElementById('ins-cdom').value, credential_type:document.getElementById('ins-ctyp').value, record_count:document.getElementById('ins-ccnt').value}, loadCreds)">INDEX CRED LOGS</button>`;
+  }
+  if(targetType==='malware'){
+    container.innerHTML=`
+      <div class="form-group"><label>Strain Label Identity *</label><input id="ins-mname"></div>
+      <div class="form-group"><label>Classification Family Architecture</label><input id="ins-mfam"></div>
+      <div class="form-group"><label>Payload Distribution Mechanics</label><select id="ins-mtyp"><option>Ransomware</option><option>RAT</option><option>Backdoor</option><option>Worm</option></select></div>
+      <div class="form-group"><label>Target System Architecture Core OS</label><input id="ins-mos" value="Windows, Linux"></div>
+      <button class="btn btn-grn" style="width:100%;" onclick="submitCreation('malware', {name:document.getElementById('ins-mname').value, family:document.getElementById('ins-mfam').value, malware_type:document.getElementById('ins-mtyp').value, target_os:document.getElementById('ins-mos').value}, loadMalware)">SAVE INVENTORY LOG</button>`;
+  }
+  if(targetType==='ioc'){
+    container.innerHTML=`
+      <div class="form-group"><label>Indicator Signature Type Mapping</label><select id="ins-ityp"><option>ip</option><option>domain</option><option>hash_sha256</option></select></div>
+      <div class="form-group"><label>Indicator Host Vector Value *</label><input id="ins-ival"></div>
+      <div class="form-group"><label>TLP Boundary Operational Level</label><select id="ins-itlp"><option>RED</option><option>AMBER</option><option>GREEN</option><option>WHITE</option></select></div>
+      <button class="btn btn-grn" style="width:100%;" onclick="submitCreation('iocs', {ioc_type:document.getElementById('ins-ityp').value, value:document.getElementById('ins-ival').value, tlp_level:document.getElementById('ins-itlp').value}, loadIOCs)">INJECT SIGNATURE METRICS</button>`;
+  }
+  if(targetType==='source'){
+    container.innerHTML=`
+      <div class="form-group"><label>Source Target System Label *</label><input id="ins-sname"></div>
+      <div class="form-group"><label>Channel Connection Mode</label><select id="ins-styp"><option>forum</option><option>leak_site</option><option>telegram</option><option>marketplace</option></select></div>
+      <div class="form-group"><label>Reliability Target Confidence Index (1-10)</label><input id="ins-srel" type="number" value="5" min="1" max="10"></div>
+      <button class="btn btn-grn" style="width:100%;" onclick="submitCreation('sources', {name:document.getElementById('ins-sname').value, source_type:document.getElementById('ins-styp').value, reliability:document.getElementById('ins-srel').value}, loadSources)">MOUNT TELEMETRY PIPELINE</button>`;
+  }
+  if(targetType==='analyst'){
+    container.innerHTML=`
+      <div class="form-group"><label>Operator Profile Name *</label><input id="ins-aname"></div>
+      <div class="form-group"><label>Secure Corporate Account Email *</label><input id="ins-amail" type="email"></div>
+      <div class="form-group"><label>Command Assignment Clearance Role</label><select id="ins-arol"><option>junior</option><option>analyst</option><option>senior</option><option>manager</option></select></div>
+      <div class="form-group"><label>Security Domain Focused Area Specialization</label><input id="ins-aspe" placeholder="APT Analysis"></div>
+      <button class="btn btn-grn" style="width:100%;" onclick="submitCreation('analysts', {name:document.getElementById('ins-aname').value, email:document.getElementById('ins-amail').value, role:document.getElementById('ins-arol').value, specialization:document.getElementById('ins-aspe').value}, loadAnalysts)">ONBOARD OPERATOR</button>`;
+  }
+}
+
+async function submitCreation(endpoint, payload, callback){
+  const r=await fetch(`${API}/${endpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(r.ok){ closeModal('form-modal'); toast('✓ Dataset compilation schema record configured successfully.'); callback(); }
+  else { toast('🚨 Failure parsing creation stream attributes.', 'var(--red)'); }
+}
+
+function showEditBreachModal(id){
+  const b = allBreaches.find(x=>x.breach_id===id); if(!b) return;
+  document.getElementById('form-modal').classList.add('show');
+  document.getElementById('form-modal-title').textContent="MODIFY INCIDENT VECTOR";
+  document.getElementById('form-modal-body').innerHTML=`
+    <div class="form-group"><label>Organization Entity Title</label><input id="edt-org" value="${b.organization}"></div>
+    <div class="form-group"><label>Breach Infrastructure Type</label><input id="edt-typ" value="${b.breach_type}"></div>
+    <div class="form-group"><label>Severity Context Metric</label><select id="edt-sev"><option ${b.severity==='Critical'?'selected':''}>Critical</option><option ${b.severity==='High'?'selected':''}>High</option><option ${b.severity==='Medium'?'selected':''}>Medium</option><option ${b.severity==='Low'?'selected':''}>Low</option></select></div>
+    <div class="form-group"><label>Impact Metrics Count Tracking</label><input id="edt-rec" type="number" value="${b.records_exposed}"></div>
+    <div class="form-group"><label>Current Action Containment Status</label><select id="edt-st"><option ${b.status==='active'?'selected':''}>active</option><option ${b.status==='contained'?'selected':''}>contained</option><option ${b.status==='resolved'?'selected':''}>resolved</option></select></div>
+    <div class="form-group"><label>Operational Narrative Description</label><textarea id="edt-desc" rows="3">${b.description||''}</textarea></div>
+    <button class="btn btn-grn" style="width:100%;" onclick="submitUpdate('breaches','${id}', {organization:document.getElementById('edt-org').value, breach_type:document.getElementById('edt-typ').value, severity:document.getElementById('edt-sev').value, records_exposed:document.getElementById('edt-rec').value, status:document.getElementById('edt-st').value, description:document.getElementById('edt-desc').value}, loadBreaches)">UPDATE LOG CONFIGURATION</button>`;
+}
+
+function showEditActorModal(id){
+  const a = allActors.find(x=>x.actor_id===id); if(!a) return;
+  document.getElementById('form-modal').classList.add('show');
+  document.getElementById('form-modal-title').textContent="EDIT THREAT ACTOR SCHEDULER";
+  document.getElementById('form-modal-body').innerHTML=`
+    <div class="form-group"><label>Operating Designation Name Alias</label><input id="edt-alias" value="${a.alias}"></div>
+    <div class="form-group"><label>Structural Classification Framework</label><select id="edt-atype"><option ${a.actor_type==='nation_state'?'selected':''}>nation_state</option><option ${a.actor_type==='ransomware_group'?'selected':''}>ransomware_group</option><option ${a.actor_type==='criminal_group'?'selected':''}>criminal_group</option></select></div>
+    <div class="form-group"><label>Sophistication Index Rating Scale</label><select id="edt-soph"><option ${a.sophistication==='Critical'?'selected':''}>Critical</option><option ${a.sophistication==='High'?'selected':''}>High</option><option ${a.sophistication==='Medium'?'selected':''}>Medium</option></select></div>
+    <div class="form-group"><label>Tactical Operation Footprint Status</label><select id="edt-ast"><option ${a.status==='active'?'selected':''}>active</option><option ${a.status==='inactive'?'selected':''}>inactive</option><option ${a.status==='arrested'?'selected':''}>arrested</option></select></div>
+    <div class="form-group"><label>Profile Analytical Dossier Description</label><textarea id="edt-adesc" rows="3">${a.description||''}</textarea></div>
+    <button class="btn btn-grn" style="width:100%;" onclick="submitUpdate('actors','${id}', {alias:document.getElementById('edt-alias').value, actor_type:document.getElementById('edt-atype').value, sophistication:document.getElementById('edt-soph').value, status:document.getElementById('edt-ast').value, description:document.getElementById('edt-adesc').value}, loadActors)">RECOMPILE ARCHIVE CONFIG</button>`;
+}
+
+function showEditCredentialModal(id){
+  const c = allCreds.find(x=>x.cred_id===id); if(!c) return;
+  document.getElementById('form-modal').classList.add('show');
+  document.getElementById('form-modal-title').textContent="EDIT CREDENTIAL ENTRY COMPILATION";
+  document.getElementById('form-modal-body').innerHTML=`
+    <div class="form-group"><label>Email Domain</label><input id="edt-cdom" value="${c.email_domain}"></div>
+    <div class="form-group"><label>Credential Structure Vector Type</label><input id="edt-ctyp" value="${c.credential_type}"></div>
+    <div class="form-group"><label>Records Contained Count</label><input id="edt-ccnt" type="number" value="${c.record_count}"></div>
+    <div class="form-group"><label>Verification Verification Level Status</label><select id="edt-cver"><option value="1" ${c.is_verified?'selected':''}>Verified</option><option value="0" ${!c.is_verified?'selected':''}>Unverified</option></select></div>
+    <div class="form-group"><label>Commercial Market Underworld Placement Status</label><select id="edt-csal"><option value="1" ${c.is_for_sale?'selected':''}>Listed For Sale</option><option value="0" ${!c.is_for_sale?'selected':''}>Internal Vault Record</option></select></div>
+    <div class="form-group"><label>Asset Evaluation Asking Price ($)</label><input id="edt-cprc" type="number" value="${c.asking_price||0}"></div>
+    <button class="btn btn-grn" style="width:100%;" onclick="submitUpdate('credentials','${id}', {email_domain:document.getElementById('edt-cdom').value, credential_type:document.getElementById('edt-ctyp').value, record_count:document.getElementById('edt-ccnt').value, is_verified:document.getElementById('edt-cver').value, is_for_sale:document.getElementById('edt-csal').value, asking_price:document.getElementById('edt-cprc').value}, loadCreds)">UPDATE EXFIL LOGS</button>`;
+}
+
+function showEditMalwareModal(id){
+  document.getElementById('form-modal').classList.add('show');
+  document.getElementById('form-modal-title').textContent="MODIFY MALWARE RECORD METRICS";
+  document.getElementById('form-modal-body').innerHTML=`
+    <div class="form-group"><label>Strain Core Name Label</label><input id="edt-mname" placeholder="Execute System Check Refresh"></div>
+    <div class="form-group"><label>Family Grouping Structure</label><input id="edt-mfam" placeholder="Family Signature Class"></div>
+    <div class="form-group"><label>Payload Profile Vector Type</label><select id="edt-mtyp"><option>Ransomware</option><option>RAT</option><option>Backdoor</option></select></div>
+    <div class="form-group"><label>OS Execution Boundaries</label><input id="edt-mos" value="Windows"></div>
+    <div class="form-group"><label>Tracking Isolation Status Indicator</label><select id="edt-mact"><option value="1">Active In-The-Wild</option><option value="0">Contained / Extinct</option></select></div>
+    <div class="form-group"><label>Functional Blueprint Code Abstract</label><textarea id="edt-mdesc" rows="2"></textarea></div>
+    <button class="btn btn-grn" style="width:100%;" onclick="submitUpdate('malware','${id}', {name:document.getElementById('edt-mname').value, family:document.getElementById('edt-mfam').value, malware_type:document.getElementById('edt-mtyp').value, target_os:document.getElementById('edt-mos').value, is_active:document.getElementById('edt-mact').value, description:document.getElementById('edt-mdesc').value}, loadMalware)">SAVE ENGINE ADJUSTMENTS</button>`;
+}
+
+function showEditIocModal(id){
+  document.getElementById('form-modal').classList.add('show');
+  document.getElementById('form-modal-title').textContent="UPDATE INDICATOR NETWORK VALUES";
+  document.getElementById('form-modal-body').innerHTML=`
+    <div class="form-group"><label>Signature Infrastructure Target Value Field</label><input id="edt-ival" placeholder="IP, Domain or Hash Value"></div>
+    <div class="form-group"><label>Indicator Type Signature Class</label><select id="edt-ityp"><option>ip</option><option>domain</option><option>hash_sha256</option></select></div>
+    <div class="form-group"><label>Confidence Scoring Index Rating (%)</label><input id="edt-icnf" type="number" min="0" max="100" value="85"></div>
+    <div class="form-group"><label>Network Tracking Intercept State</label><select id="edt-iact"><option value="1">Active Rule Flag</option><option value="0">Decommissioned / Suppressed</option></select></div>
+    <div class="form-group"><label>TLP Intelligence Boundary Classification Level</label><select id="edt-itlp"><option>RED</option><option>AMBER</option><option>GREEN</option></select></div>
+    <button class="btn btn-grn" style="width:100%;" onclick="submitUpdate('iocs','${id}', {value:document.getElementById('edt-ival').value, ioc_type:document.getElementById('edt-ityp').value, confidence:document.getElementById('edt-icnf').value, is_active:document.getElementById('edt-iact').value, tlp_level:document.getElementById('edt-itlp').value}, loadIOCs)">APPLY SYSTEM POLICY</button>`;
+}
+
+function showEditSourceModal(id){
+  document.getElementById('form-modal').classList.add('show');
+  document.getElementById('form-modal-title').textContent="ADJUST MONITORED STREAM TELEMETRY";
+  document.getElementById('form-modal-body').innerHTML=`
+    <div class="form-group"><label>Network Hub Source Target Identity Name</label><input id="edt-sname" placeholder="Target Alias"></div>
+    <div class="form-group"><label>Structural Node Vector Classification</label><select id="edt-styp"><option>forum</option><option>leak_site</option><option>telegram</option></select></div>
+    <div class="form-group"><label>Source Feed Reliability Coefficient Value</label><input id="edt-srel" type="number" min="1" max="10" value="7"></div>
+    <div class="form-group"><label>Monitoring Tracker State</label><select id="edt-sact"><option value="1">Online Intercept Loop Running</option><option value="0">Offline Terminated Pipeline</option></select></div>
+    <div class="form-group"><label>Channel Structural Overview Description Summary</label><textarea id="edt-sdesc" rows="2"></textarea></div>
+    <button class="btn btn-grn" style="width:100%;" onclick="submitUpdate('sources','${id}', {name:document.getElementById('edt-sname').value, source_type:document.getElementById('edt-styp').value, reliability:document.getElementById('edt-srel').value, is_active:document.getElementById('edt-sact').value, description:document.getElementById('edt-sdesc').value}, loadSources)">UPDATE INFRASTRUCTURE ACCESS</button>`;
+}
+
+function showEditAnalystModal(id){
+  document.getElementById('form-modal').classList.add('show');
+  document.getElementById('form-modal-title').textContent="MODIFY OPERATOR CLEARANCE CRITERIA";
+  document.getElementById('form-modal-body').innerHTML=`
+    <div class="form-group"><label>Personal Operator Account Registration Name</label><input id="edt-aname" placeholder="Verify Registration Matrix"></div>
+    <div class="form-group"><label>Secure Corporate Terminal Account Email</label><input id="edt-amail" type="email" placeholder="internal@darkwatch.io"></div>
+    <div class="form-group"><label>Access Authorization Clearance Role Profile</label><select id="edt-arol"><option>junior</option><option>analyst</option><option>senior</option><option>manager</option></select></div>
+    <div class="form-group"><label>Security Domain Focused Area Specialization</label><input id="edt-aspe" placeholder="Malware Triage Matrix"></div>
+    <button class="btn btn-grn" style="width:100%;" onclick="submitUpdate('analysts','${id}', {name:document.getElementById('edt-aname').value, email:document.getElementById('edt-amail').value, role:document.getElementById('edt-arol').value, specialization:document.getElementById('edt-aspe').value}, loadAnalysts)">RECOMPILE ACCOUNT CLEARANCE</button>`;
+}
+
+async function submitUpdate(endpoint, id, payload, callback){
+  const r=await fetch(`${API}/${endpoint}/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(r.ok){ closeModal('form-modal'); toast('✓ Target configuration dataset recompiled successfully.'); callback(); }
+  else { toast('🚨 Refused context parameter transformation constraints.', 'var(--red)'); }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
